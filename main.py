@@ -1,12 +1,14 @@
-# script by Victor Reyes
+# Modified script by Victor Reyes
 
 import snscrape.modules.twitter as sntwitter
 import pandas as pd
 import datetime
 
-# Creating list to append tweet data to
-tweets_list2 = []
+# Initializing variables
+tweets_list = []
 search_terms = ["kadamay komunista", "kadamay communist", "kadamay npa", "kadamay magnanakaw ng bahay", "kadamay skwater"]
+user = "kurimaw"
+research_topic = "Red-tagging of Kadamay"
 
 years = [
     "2016",
@@ -48,52 +50,51 @@ end_of_month_days = [
     "31"
 ]
 
-# Using TwitterSearchScraper to scrape data and append tweets to list
+# Initializing data frame
+df = pd.DataFrame(columns=[
+    "Timestamp", "Collector", "Topic", "Keywords",
+    "Account Handle", "Account Name", "Account Bio", "Account Type", "Joined", "Following", "Followers", "Location",
+    "Tweet", "Tweet Type", "Date Posted", "Tweet URL", "Screenshot", "Content Type", "Likes", "Replies", "Retweets",
+    "Rating", "Reasoning", "Other Data"
+])
 
+# Using TwitterSearchScraper to scrape data and append tweets to list
 for search_term in search_terms:
     for year in years:
         for month in range(len(months)):
             print(f"Starting with {year}-{months[month]}-01")
             for i, tweet in enumerate(
                     sntwitter.TwitterSearchScraper(f'{search_term} since:{year}-{months[month]}-01 until:{year}-{months[month]}-{end_of_month_days[month]}').get_items()):
-                if i >= 150:
+                if i >= 300:
                     break
-                tweets_list2.append([tweet.date,
-                                     tweet.id,
-                                     tweet.rawContent,
-                                     tweet.replyCount,
-                                     tweet.likeCount,
-                                     tweet.retweetCount,
-                                     tweet.quoteCount,
-                                     tweet.url,
-                                     " ",
-                                     tweet.user.username,
-                                     tweet.user.displayname,
-                                     tweet.user.rawDescription,
-                                     tweet.user.renderedDescription,
-                                     tweet.user.verified,
-                                     tweet.user.created,
-                                     tweet.user.followersCount])
+
+                # Populating fields
+                df2 = {
+                    "Timestamp": [datetime.date.today()],
+                    "Collector": [user],
+                    "Topic": [research_topic],
+                    "Keywords": [search_term],
+                    "Account Handle": [tweet.user.username],
+                    "Account Name": [tweet.user.displayname],
+                    "Account Bio": [tweet.user.rawDescription],
+                    "Joined": [tweet.user.created],
+                    "Following": [tweet.user.friendsCount],
+                    "Followers": [tweet.user.followersCount],
+                    "Location": [tweet.user.location],
+                    "Tweet": [tweet.rawContent],
+                    "Date Posted": [tweet.date],
+                    "Tweet URL": [tweet.url],
+                    "Likes": [tweet.likeCount],
+                    "Replies": [tweet.replyCount],
+                    "Retweets": [tweet.retweetCount],
+                }
+
+                df = pd.concat([df, pd.DataFrame.from_records(df2)])
             print(f"Done with {year}-{months[month]}-{end_of_month_days[month]}")
 
-    # Creating a dataframe from the tweets list above
-    tweets_df2 = pd.DataFrame(tweets_list2, columns=['Datetime',
-                                                     'Tweet Id',
-                                                     'Text',
-                                                     'Replies',
-                                                     'Likes',
-                                                     'Retweets',
-                                                     'Quote Retweets',
-                                                     'URL',
-                                                     'Intentionally left blank',
-                                                     'Username',
-                                                     'Display Name',
-                                                     'Raw Description',
-                                                     'Rendered Description',
-                                                     'Verified?',
-                                                     'Date Created',
-                                                     'Followers Count'])
+    df.to_csv(f'term_{search_term}.csv')
 
-    tweets_df2.to_csv(f'term_{search_term} date_{datetime.date.today()}.csv')
+# patulong sa pagconvert
+df['Date Posted'] = df['Date Posted'].dt.tz_convert('Etc/GMT+8')
 
-print(tweets_df2['Text'])
+print("Done.")
